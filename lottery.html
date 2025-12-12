@@ -23,13 +23,14 @@
             color: var(--text);
             margin: 0;
             padding: 20px;
-            padding-bottom: 100px;
+            padding-bottom: 120px;
             -webkit-tap-highlight-color: transparent;
         }
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            position: relative;
         }
 
         h1 {
@@ -42,6 +43,16 @@
             color: #666;
             font-size: 14px;
             margin-top: 5px;
+        }
+
+        .settings-btn {
+            position: absolute;
+            top: 0; right: 0;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
         }
 
         /* Villa Grid */
@@ -60,7 +71,10 @@
             padding: 20px;
             overflow: hidden;
             position: relative;
+            animation: fadeIn 0.5s ease;
         }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .villa-title {
             font-weight: 700;
@@ -75,10 +89,12 @@
         .rooms-container {
             display: flex;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .room {
             flex: 1;
+            min-width: 100px;
             background: var(--bg);
             border-radius: 12px;
             height: 80px;
@@ -90,6 +106,9 @@
             border: 2px dashed #CBD5E0;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
+            padding: 5px;
+            text-align: center;
+            word-break: break-word;
         }
 
         .room.occupied {
@@ -113,8 +132,10 @@
             box-sizing: border-box;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             z-index: 100;
+            gap: 10px;
         }
 
         .draw-btn {
@@ -132,18 +153,15 @@
             max-width: 400px;
         }
 
-        .draw-btn:active {
-            transform: scale(0.96);
-        }
-
-        .draw-btn:disabled {
-            background: #ccc;
-            box-shadow: none;
-            cursor: not-allowed;
+        .draw-btn:active { transform: scale(0.96); }
+        .draw-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+        
+        .reset-btn {
+            background: none; border: none; color: #999; text-decoration: underline; font-size: 12px; cursor: pointer;
         }
 
         /* Modal / Overlay */
-        #result-overlay {
+        .overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8);
@@ -157,26 +175,41 @@
             transition: opacity 0.3s;
         }
 
-        #result-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
 
-        .result-card {
+        .modal-card {
             background: white;
             padding: 30px;
             border-radius: 20px;
             text-align: center;
-            width: 80%;
-            max-width: 300px;
+            width: 85%;
+            max-width: 320px;
+            max-height: 80vh;
+            overflow-y: auto;
             transform: scale(0.8);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
         }
 
-        #result-overlay.active .result-card {
-            transform: scale(1);
-        }
+        .overlay.active .modal-card { transform: scale(1); }
 
+        /* Settings Styles */
+        .settings-section { text-align: left; margin-bottom: 20px; }
+        .settings-label { font-weight: bold; font-size: 14px; margin-bottom: 5px; display: block; color: var(--text); }
+        textarea.config-input {
+            width: 100%; height: 100px; padding: 10px;
+            border: 1px solid #ddd; border-radius: 8px;
+            font-family: inherit; box-sizing: border-box; resize: none;
+        }
+        .villa-config-row {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+            background: #f9f9f9; padding: 8px; border-radius: 8px;
+        }
+        .btn-small { padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; background: white; cursor: pointer; }
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; font-size: 16px; margin-top: 10px; }
+        
+        /* Result Styles */
         .emoji-icon { font-size: 48px; margin-bottom: 10px; display: block; }
         .result-family { font-size: 24px; font-weight: bold; color: var(--text); margin: 10px 0; }
         .result-arrow { font-size: 20px; color: #999; margin: 5px 0; }
@@ -200,7 +233,6 @@
             margin-bottom: 15px;
         }
 
-        /* Confetti */
         canvas#confetti {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -213,52 +245,52 @@
 
     <header>
         <h1>🏖️ 别墅分房抽签</h1>
-        <p class="subtitle">5组家庭 · 3套别墅 · 随机分配</p>
+        <p class="subtitle" id="subtitle">加载中...</p>
+        <button class="settings-btn" onclick="openSettings()">⚙️</button>
     </header>
 
     <div class="status">
-        还有 <span id="family-count" style="color:var(--accent); font-weight:bold;">5</span> 组家庭未分配
+        还有 <span id="family-count" style="color:var(--accent); font-weight:bold;">0</span> 组家庭未分配
     </div>
 
     <div class="grid" id="villa-grid">
-        <!-- Villa 1 -->
-        <div class="villa-card">
-            <div class="villa-title">🏡 1号别墅 (湖景)</div>
-            <div class="rooms-container">
-                <div class="room" id="v1-r1" data-v="1" data-r="1">空闲</div>
-                <div class="room" id="v1-r2" data-v="1" data-r="2">空闲</div>
-            </div>
-        </div>
-        <!-- Villa 2 -->
-        <div class="villa-card">
-            <div class="villa-title">🌲 2号别墅 (山景)</div>
-            <div class="rooms-container">
-                <div class="room" id="v2-r1" data-v="2" data-r="1">空闲</div>
-                <div class="room" id="v2-r2" data-v="2" data-r="2">空闲</div>
-            </div>
-        </div>
-        <!-- Villa 3 -->
-        <div class="villa-card">
-            <div class="villa-title">🌸 3号别墅 (花园)</div>
-            <div class="rooms-container">
-                <div class="room" id="v3-r1" data-v="3" data-r="1">空闲</div>
-                <div class="room" id="v3-r2" data-v="3" data-r="2">空闲</div>
-            </div>
-        </div>
+        <!-- JS will render villas here -->
     </div>
 
     <div class="action-bar">
         <button class="draw-btn" id="drawBtn" onclick="draw()">开始抽签</button>
+        <button class="reset-btn" onclick="resetGame()">重置当前进度</button>
     </div>
 
     <!-- Result Modal -->
-    <div id="result-overlay">
-        <div class="result-card">
+    <div id="result-overlay" class="overlay">
+        <div class="modal-card">
             <span class="emoji-icon">🎉</span>
-            <div class="result-family" id="modal-family">家庭 A</div>
+            <div class="result-family" id="modal-family">-</div>
             <div class="result-arrow">即将入住</div>
-            <div class="result-villa" id="modal-villa">1号别墅 - 房间 1</div>
-            <button class="close-btn" onclick="closeModal()">确认入住</button>
+            <div class="result-villa" id="modal-villa">-</div>
+            <button class="close-btn" onclick="closeResultModal()">确认入住</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-overlay" class="overlay">
+        <div class="modal-card" style="text-align: left;">
+            <h2 style="margin-top:0; text-align:center;">⚙️ 全局设置</h2>
+            
+            <div class="settings-section">
+                <label class="settings-label">家庭名单 (一行一个)</label>
+                <textarea id="families-input" class="config-input"></textarea>
+            </div>
+
+            <div class="settings-section">
+                <label class="settings-label">别墅配置</label>
+                <div id="villa-config-list"></div>
+                <button class="btn-small" onclick="addVillaConfig()" style="width:100%; margin-top:5px; border-style:dashed;">+ 添加一栋别墅</button>
+            </div>
+
+            <button class="btn-primary" onclick="saveSettings()">保存并重置</button>
+            <button class="reset-btn" onclick="closeSettings()" style="margin-top:10px;">取消</button>
         </div>
     </div>
 
@@ -266,43 +298,122 @@
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
-        // --- Configuration ---
-        const FAMILIES = [
-            "张先生一家 👨‍👩‍👧",
-            "李女士一家 👩‍👦",
-            "王总一家 👨‍👩‍👦‍👦",
-            "赵老师一家 👴👵",
-            "钱先生一家 💑"
-        ];
-
-        // 6 Available Slots
-        const SLOTS = [
-            {id: 'v1-r1', name: '1号别墅 - 房间A'},
-            {id: 'v1-r2', name: '1号别墅 - 房间B'},
-            {id: 'v2-r1', name: '2号别墅 - 房间A'},
-            {id: 'v2-r2', name: '2号别墅 - 房间B'},
-            {id: 'v3-r1', name: '3号别墅 - 房间A'},
-            {id: 'v3-r2', name: '3号别墅 - 房间B'}
-        ];
+        // --- Default Config ---
+        const DEFAULT_CONFIG = {
+            families: ["杨杨一家", "豆豆一家", "圆圆一家", "霖霖一家", "肉肉一家"],
+            villas: [
+                { name: "1号别墅", rooms: 2 },
+                { name: "2号别墅", rooms: 2 },
+                { name: "3号别墅", rooms: 2 }
+            ]
+        };
 
         // State
-        let availableFamilies = [...FAMILIES];
-        let availableSlots = [...SLOTS];
+        let config = loadConfig();
+        let gameState = {
+            availableFamilies: [],
+            availableSlots: [],
+            assignments: {} // slotId -> familyName
+        };
         let isDrawing = false;
 
-        // Shuffle Array Helper
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+        // --- Init ---
+        initGame();
+
+        // --- Core Functions ---
+
+        function loadConfig() {
+            const saved = localStorage.getItem('lottery_config');
+            return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        }
+
+        function initGame() {
+            // Restore or Reset Game State
+            const savedState = localStorage.getItem('lottery_state');
+            if (savedState) {
+                gameState = JSON.parse(savedState);
+            } else {
+                resetGameStateData();
+            }
+
+            renderGrid();
+            updateUI();
+        }
+
+        function resetGameStateData() {
+            gameState.availableFamilies = [...config.families];
+            gameState.availableSlots = [];
+            gameState.assignments = {};
+
+            // Generate Slots based on Villa Config
+            config.villas.forEach((v, vIndex) => {
+                for (let r = 1; r <= v.rooms; r++) {
+                    gameState.availableSlots.push({
+                        id: `v${vIndex}-r${r}`,
+                        name: `${v.name} - 房间${r}`,
+                        villaIndex: vIndex,
+                        roomIndex: r
+                    });
+                }
+            });
+            saveGameState();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('villa-grid');
+            grid.innerHTML = '';
+
+            config.villas.forEach((v, vIndex) => {
+                const card = document.createElement('div');
+                card.className = 'villa-card';
+                
+                let roomsHtml = '';
+                for (let r = 1; r <= v.rooms; r++) {
+                    const slotId = `v${vIndex}-r${r}`;
+                    const assignedFamily = gameState.assignments[slotId];
+                    const occupiedClass = assignedFamily ? 'occupied' : '';
+                    const text = assignedFamily || '空闲';
+                    
+                    roomsHtml += `
+                        <div class="room ${occupiedClass}" id="${slotId}">
+                            ${text}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="villa-title">${v.name}</div>
+                    <div class="rooms-container">${roomsHtml}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Update Subtitle
+            const totalRooms = config.villas.reduce((acc, v) => acc + v.rooms, 0);
+            document.getElementById('subtitle').innerText = 
+                `${config.families.length}组家庭 · ${config.villas.length}套别墅 · ${totalRooms}个房间`;
+        }
+
+        function updateUI() {
+            document.getElementById('family-count').innerText = gameState.availableFamilies.length;
+            const btn = document.getElementById('drawBtn');
+            
+            if (gameState.availableFamilies.length === 0) {
+                btn.innerText = "分配完成";
+                btn.disabled = true;
+            } else if (gameState.availableSlots.length === 0) {
+                btn.innerText = "房间已满";
+                btn.disabled = true;
+            } else {
+                btn.innerText = "抽取下一组";
+                btn.disabled = false;
             }
         }
 
-        // Init
-        document.getElementById('family-count').innerText = availableFamilies.length;
+        // --- Actions ---
 
         function draw() {
-            if (isDrawing || availableFamilies.length === 0) return;
+            if (isDrawing || gameState.availableFamilies.length === 0 || gameState.availableSlots.length === 0) return;
             isDrawing = true;
             
             const btn = document.getElementById('drawBtn');
@@ -310,73 +421,129 @@
             btn.innerText = "抽签中...";
 
             // Simulate suspense
-            let suspenseTime = 800;
-            
             setTimeout(() => {
                 // 1. Pick Random Family
-                shuffle(availableFamilies);
-                const family = availableFamilies.pop();
+                const fIndex = Math.floor(Math.random() * gameState.availableFamilies.length);
+                const family = gameState.availableFamilies[fIndex];
+                gameState.availableFamilies.splice(fIndex, 1);
 
                 // 2. Pick Random Slot
-                shuffle(availableSlots);
-                const slot = availableSlots.pop();
+                const sIndex = Math.floor(Math.random() * gameState.availableSlots.length);
+                const slot = gameState.availableSlots[sIndex];
+                gameState.availableSlots.splice(sIndex, 1);
+
+                // 3. Record Assignment
+                gameState.assignments[slot.id] = family;
+                saveGameState();
 
                 showResult(family, slot);
-
-                // Update UI State
-                document.getElementById('family-count').innerText = availableFamilies.length;
-                
-                if (availableFamilies.length === 0) {
-                    btn.innerText = "分配完成";
-                } else {
-                    btn.innerText = "抽取下一组";
-                    btn.disabled = false;
-                }
+                updateUI();
                 isDrawing = false;
 
-            }, suspenseTime);
+            }, 800);
         }
 
         function showResult(family, slot) {
             const overlay = document.getElementById('result-overlay');
-            const txtFamily = document.getElementById('modal-family');
-            const txtVilla = document.getElementById('modal-villa');
-
-            txtFamily.innerText = family;
-            txtVilla.innerText = slot.name;
-
-            // Update the actual DOM element for the room
-            const roomEl = document.getElementById(slot.id);
-            // Temporarily store data to apply after animation
-            roomEl.dataset.tempFamily = family;
-
+            document.getElementById('modal-family').innerText = family;
+            document.getElementById('modal-villa').innerText = slot.name;
+            
             overlay.classList.add('active');
             
             // Fire Confetti
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            });
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
 
-        function closeModal() {
-            const overlay = document.getElementById('result-overlay');
-            overlay.classList.remove('active');
+        function closeResultModal() {
+            document.getElementById('result-overlay').classList.remove('active');
+            // Re-render to show occupied state
+            renderGrid();
+        }
 
-            // Apply to Grid
-            const txtVilla = document.getElementById('modal-villa').innerText;
-            // Find which slot was just assigned (using the text is a bit hacky but works for this scale, 
-            // better to use state variables but we cleared them. Let's look at the DOM dataset we saved).
+        function resetGame() {
+            if(confirm('确定要重置所有分配结果吗？')) {
+                resetGameStateData();
+                renderGrid();
+                updateUI();
+            }
+        }
+
+        function saveGameState() {
+            localStorage.setItem('lottery_state', JSON.stringify(gameState));
+        }
+
+        // --- Settings Logic ---
+
+        function openSettings() {
+            const overlay = document.getElementById('settings-overlay');
+            const familiesInput = document.getElementById('families-input');
+            const villaList = document.getElementById('villa-config-list');
+
+            // Load data into inputs
+            familiesInput.value = config.families.join('\n');
             
-            // Actually, let's just find the room element that has the temp data
-            document.querySelectorAll('.room').forEach(el => {
-                if(el.dataset.tempFamily) {
-                    el.innerText = el.dataset.tempFamily;
-                    el.classList.add('occupied');
-                    delete el.dataset.tempFamily;
+            // Render Villa Config inputs
+            villaList.innerHTML = '';
+            config.villas.forEach((v, idx) => {
+                addVillaConfigRow(villaList, v.name, v.rooms, idx);
+            });
+
+            overlay.classList.add('active');
+        }
+
+        function addVillaConfigRow(container, name, rooms, idx) {
+            const div = document.createElement('div');
+            div.className = 'villa-config-row';
+            div.innerHTML = `
+                <input type="text" value="${name}" class="villa-name-input" style="width:100px; padding:4px;">
+                <input type="number" value="${rooms}" class="villa-rooms-input" style="width:40px; padding:4px;" min="1" max="10">
+                <span>间</span>
+                <button class="btn-small" onclick="this.parentElement.remove()" style="color:red;">×</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function addVillaConfig() {
+            const list = document.getElementById('villa-config-list');
+            const count = list.children.length + 1;
+            addVillaConfigRow(list, `${count}号别墅`, 2);
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-overlay').classList.remove('active');
+        }
+
+        function saveSettings() {
+            // Parse Families
+            const rawFamilies = document.getElementById('families-input').value;
+            const newFamilies = rawFamilies.split('\n').map(s => s.trim()).filter(s => s);
+
+            // Parse Villas
+            const villaRows = document.querySelectorAll('.villa-config-row');
+            const newVillas = [];
+            villaRows.forEach(row => {
+                const name = row.querySelector('.villa-name-input').value;
+                const rooms = parseInt(row.querySelector('.villa-rooms-input').value);
+                if (name && rooms > 0) {
+                    newVillas.push({ name, rooms });
                 }
             });
+
+            if (newFamilies.length === 0 || newVillas.length === 0) {
+                alert("请至少保留一组家庭和一套别墅！");
+                return;
+            }
+
+            // Save
+            config.families = newFamilies;
+            config.villas = newVillas;
+            localStorage.setItem('lottery_config', JSON.stringify(config));
+            
+            // Reset Game with new config
+            resetGameStateData();
+            renderGrid();
+            updateUI();
+            closeSettings();
         }
     </script>
 </body>
