@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>别墅分房大抽签</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --accent: #FF6B6B;
+            --bg: #F0F4F8;
+            --card-bg: #FFFFFF;
+            --text: #333333;
+            --empty: #E0E0E0;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 100px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 24px;
+            margin: 0;
+        }
+
+        p.subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* Villa Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .villa-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .villa-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+        }
+
+        .rooms-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .room {
+            flex: 1;
+            background: var(--bg);
+            border-radius: 12px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #999;
+            border: 2px dashed #CBD5E0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .room.occupied {
+            background: #E3F2FD;
+            border-style: solid;
+            border-color: var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(74, 144, 226, 0.2);
+            transform: scale(1.02);
+        }
+
+        /* Action Bar */
+        .action-bar {
+            position: fixed;
+            bottom: 0; left: 0; width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .draw-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            cursor: pointer;
+            transition: transform 0.1s;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .draw-btn:active {
+            transform: scale(0.96);
+        }
+
+        .draw-btn:disabled {
+            background: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* Modal / Overlay */
+        #result-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        #result-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .result-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 80%;
+            max-width: 300px;
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #result-overlay.active .result-card {
+            transform: scale(1);
+        }
+
+        .emoji-icon { font-size: 48px; margin-bottom: 10px; display: block; }
+        .result-family { font-size: 24px; font-weight: bold; color: var(--text); margin: 10px 0; }
+        .result-arrow { font-size: 20px; color: #999; margin: 5px 0; }
+        .result-villa { font-size: 18px; color: var(--primary); margin-bottom: 20px; }
+        
+        .close-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Status Bar */
+        .status {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        /* Confetti */
+        canvas#confetti {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 150;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🏖️ 别墅分房抽签</h1>
+        <p class="subtitle">5组家庭 · 3套别墅 · 随机分配</p>
+    </header>
+
+    <div class="status">
+        还有 <span id="family-count" style="color:var(--accent); font-weight:bold;">5</span> 组家庭未分配
+    </div>
+
+    <div class="grid" id="villa-grid">
+        <!-- Villa 1 -->
+        <div class="villa-card">
+            <div class="villa-title">🏡 1号别墅 (湖景)</div>
+            <div class="rooms-container">
+                <div class="room" id="v1-r1" data-v="1" data-r="1">空闲</div>
+                <div class="room" id="v1-r2" data-v="1" data-r="2">空闲</div>
+            </div>
+        </div>
+        <!-- Villa 2 -->
+        <div class="villa-card">
+            <div class="villa-title">🌲 2号别墅 (山景)</div>
+            <div class="rooms-container">
+                <div class="room" id="v2-r1" data-v="2" data-r="1">空闲</div>
+                <div class="room" id="v2-r2" data-v="2" data-r="2">空闲</div>
+            </div>
+        </div>
+        <!-- Villa 3 -->
+        <div class="villa-card">
+            <div class="villa-title">🌸 3号别墅 (花园)</div>
+            <div class="rooms-container">
+                <div class="room" id="v3-r1" data-v="3" data-r="1">空闲</div>
+                <div class="room" id="v3-r2" data-v="3" data-r="2">空闲</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button class="draw-btn" id="drawBtn" onclick="draw()">开始抽签</button>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-overlay">
+        <div class="result-card">
+            <span class="emoji-icon">🎉</span>
+            <div class="result-family" id="modal-family">家庭 A</div>
+            <div class="result-arrow">即将入住</div>
+            <div class="result-villa" id="modal-villa">1号别墅 - 房间 1</div>
+            <button class="close-btn" onclick="closeModal()">确认入住</button>
+        </div>
+    </div>
+
+    <canvas id="confetti"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        // --- Configuration ---
+        const FAMILIES = [
+            "张先生一家 👨‍👩‍👧",
+            "李女士一家 👩‍👦",
+            "王总一家 👨‍👩‍👦‍👦",
+            "赵老师一家 👴👵",
+            "钱先生一家 💑"
+        ];
+
+        // 6 Available Slots
+        const SLOTS = [
+            {id: 'v1-r1', name: '1号别墅 - 房间A'},
+            {id: 'v1-r2', name: '1号别墅 - 房间B'},
+            {id: 'v2-r1', name: '2号别墅 - 房间A'},
+            {id: 'v2-r2', name: '2号别墅 - 房间B'},
+            {id: 'v3-r1', name: '3号别墅 - 房间A'},
+            {id: 'v3-r2', name: '3号别墅 - 房间B'}
+        ];
+
+        // State
+        let availableFamilies = [...FAMILIES];
+        let availableSlots = [...SLOTS];
+        let isDrawing = false;
+
+        // Shuffle Array Helper
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Init
+        document.getElementById('family-count').innerText = availableFamilies.length;
+
+        function draw() {
+            if (isDrawing || availableFamilies.length === 0) return;
+            isDrawing = true;
+            
+            const btn = document.getElementById('drawBtn');
+            btn.disabled = true;
+            btn.innerText = "抽签中...";
+
+            // Simulate suspense
+            let suspenseTime = 800;
+            
+            setTimeout(() => {
+                // 1. Pick Random Family
+                shuffle(availableFamilies);
+                const family = availableFamilies.pop();
+
+                // 2. Pick Random Slot
+                shuffle(availableSlots);
+                const slot = availableSlots.pop();
+
+                showResult(family, slot);
+
+                // Update UI State
+                document.getElementById('family-count').innerText = availableFamilies.length;
+                
+                if (availableFamilies.length === 0) {
+                    btn.innerText = "分配完成";
+                } else {
+                    btn.innerText = "抽取下一组";
+                    btn.disabled = false;
+                }
+                isDrawing = false;
+
+            }, suspenseTime);
+        }
+
+        function showResult(family, slot) {
+            const overlay = document.getElementById('result-overlay');
+            const txtFamily = document.getElementById('modal-family');
+            const txtVilla = document.getElementById('modal-villa');
+
+            txtFamily.innerText = family;
+            txtVilla.innerText = slot.name;
+
+            // Update the actual DOM element for the room
+            const roomEl = document.getElementById(slot.id);
+            // Temporarily store data to apply after animation
+            roomEl.dataset.tempFamily = family;
+
+            overlay.classList.add('active');
+            
+            // Fire Confetti
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('result-overlay');
+            overlay.classList.remove('active');
+
+            // Apply to Grid
+            const txtVilla = document.getElementById('modal-villa').innerText;
+            // Find which slot was just assigned (using the text is a bit hacky but works for this scale, 
+            // better to use state variables but we cleared them. Let's look at the DOM dataset we saved).
+            
+            // Actually, let's just find the room element that has the temp data
+            document.querySelectorAll('.room').forEach(el => {
+                if(el.dataset.tempFamily) {
+                    el.innerText = el.dataset.tempFamily;
+                    el.classList.add('occupied');
+                    delete el.dataset.tempFamily;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
